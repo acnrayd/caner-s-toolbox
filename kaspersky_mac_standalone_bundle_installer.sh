@@ -53,3 +53,4 @@ sudo sh $kes_installer || ExitWithError $?
 
 echo "KES successfully installed!"
 ExitWithError 0 ""
+
