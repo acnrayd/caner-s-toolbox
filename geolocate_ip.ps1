@@ -8,15 +8,14 @@ Param(
 $filename = Get-Content $filename
 $file = $filename | sort -unique
 $regex = "\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"
-$matches = [regex]::Matches($file, $regex)
+$matches = [regex]::Matches($file, $regex) | sort -Unique
 
 $records = @()
-
 
 foreach ($match in $matches) {
     $ip = $match.Value
     $country = (Invoke-WebRequest "http://ip-api.com/json/$ip" -UseBasicParsing).Content | ConvertFrom-Json
-    Write-Host "IP: $ip  Country: $($country.country)" 
+    ### Write-Host "IP: $ip  Country: $($country.country)" 
 
     $records += New-Object PSObject -Property @{
         IP = $ip
@@ -25,4 +24,3 @@ foreach ($match in $matches) {
 }
 
 $records | Out-GridView -Title "IP by Country"
- 
