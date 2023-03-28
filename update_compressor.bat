@@ -5,7 +5,9 @@
 set YYYY=%date:~10,4%
 set GUN=%date:~4,2%
 set AY=%date:~7,2%
-
 set FILENAME=Guncelleme_Paketi-%GUN%%AY%%YYYY%
 
-powershell -Command "& {Compress-Archive -Path C:\ProgramData\KasperskyLab\adminkit\1093\.working\share\Updates -DestinationPath %FILENAME%.zip;}"
+set KAYNAK_PATH="C:\ProgramData\KasperskyLab\adminkit\1093\.working\share\Updates"
+set HEDEF_PATH="C:\ProgramData\KasperskyLab\adminkit\1093\.working\share\%FILENAME%.zip"
+
+powershell -Command "& {Compress-Archive -Path %KAYNAK_PATH% -DestinationPath %HEDEF_PATH%;}"
