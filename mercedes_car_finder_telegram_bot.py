@@ -1,22 +1,20 @@
-# Bot to retrieve list of cars on sale in Mercedes Benz Turkey website. 
+### Bot to retrieve list of cars on sale in Mercedes Benz Turkey website. 
 # It also sends notification to my Telegram bot when a new car is available.
 # I am running this code in a Docker container 7&24.
 
 import requests
 import time
 
-TOKEN = "TELEGRAM_BOT_TOKEN"
-chat_id = "TELEGRAM_BOT_CHATID"
+TOKEN = "TELEGRAM_TOKEN"
+chat_id = "CHAT_ID
 
-# message = "hello from your telegram bot"
-# url2 = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
-# print(requests.get(ur2l).json()) # this sends the message
+url2 = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
 
 def send_message(message):
-	url2 = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
-	print(requests.get(url2).json())
+    url2 = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
+    print(requests.get(url2).json()) 
 
-url = "https://shop.mercedes-benz.com/*******" # Secret souce is finding the target URL :)
+url = "URL_OF_MERCEDES_STORE" ## Your secret mission is to find this URL. 
 
 prev_products = []
 
@@ -30,13 +28,19 @@ while True:
         for product in products:
             description = product.get("description", "")
             commission_number = product.get("commissionNumber", "")
-            
+            price = product.get("price", {})
+            price = price.get("formattedValue", "")
+            estimated_arrival = product.get("stock", {})
+            estimated_arrival = estimated_arrival.get("estimatedArrivalDate", "")
+            stock = product.get("stock", {})
+            stock = stock.get("stockType", "")
+
             if (description, commission_number) not in prev_products:
-                print(f"New product added: Description = {description}, Commission Number = {commission_number}")
-                message = f"New product added:\nDescription: {description}\nCommission Number: {commission_number}"
+                print(f"Yeni Arac eklendi: Model = {description}, Fiyat: {price}, Commission Nr = {commission_number}")
+                message = f"Yeni Arac Eklendi:\nModel: {description}\nFiyat: {price}\nStok: {stock}\nTeslim: {estimated_arrival}\nCommission Nr: {commission_number}"
                 send_message(message)
                 prev_products.append((description, commission_number))
     else:
-        print("Error")
-    
-    time.sleep(300)
+        print("Error: Failed to retrieve data from the URL.")
+
+    time.sleep(30)
