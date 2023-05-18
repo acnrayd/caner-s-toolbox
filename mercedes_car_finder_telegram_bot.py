@@ -16,7 +16,7 @@ def send_message(message):
 	url2 = f"https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={chat_id}&text={message}"
 	print(requests.get(url2).json())
 
-url = "https://shop.mercedes-benz.com/smsc-backend-os/dcp-api/v2/market-tr/products/search?lang=tr&query=%3Aprice-asc%3AallCategories%3Amarket-tr-new-passenger-cars&currentPage=0&pageSize=12&fields=FULL"
+url = "https://shop.mercedes-benz.com/*******" # Secret souce is finding the target URL :)
 
 prev_products = []
 
