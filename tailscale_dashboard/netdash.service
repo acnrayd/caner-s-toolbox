@@ -1,0 +1,21 @@
+[Unit]
+Description=NetDash network dashboard server
+After=network.target vnstat.service
+Wants=vnstat.service
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/netdash/server.py
+DynamicUser=yes
+Restart=always
+RestartSec=3
+# disk/journal yazmasini en aza indir
+StandardOutput=null
+StandardError=journal
+# sikilastirma
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

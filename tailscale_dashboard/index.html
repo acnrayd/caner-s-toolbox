@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetDash</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page:       #0d0d0d;
+    --surface:    #1a1a19;
+    --border:     rgba(255,255,255,0.10);
+    --ink:        #ffffff;
+    --ink-2:      #c3c2b7;
+    --muted:      #898781;
+    --grid:       #2c2c2a;
+    --down:       #3987e5;   /* indirme serisi */
+    --up:         #199e70;   /* yükleme serisi */
+    --good:       #0ca30c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(10px, 1.5vw, 20px);
+    gap: clamp(10px, 1.5vw, 16px);
+    overflow: hidden;
+    cursor: none;               /* kiosk: imleci gizle */
+    user-select: none;
+  }
+
+  /* ---------- üst bar ---------- */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  #hostname { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
+  .chip {
+    font-size: clamp(11px, 1.5vw, 14px);
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+  #clock {
+    margin-left: auto;
+    text-align: right;
+    line-height: 1.2;
+  }
+  #clock .time { font-size: clamp(16px, 2.2vw, 22px); font-weight: 600; }
+  #clock .date { font-size: clamp(10px, 1.3vw, 13px); color: var(--muted); }
+
+  /* ---------- kartlar ---------- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-rows: 1fr 1fr;   /* iki kart alt alta */
+    gap: clamp(10px, 1.5vw, 16px);
+    min-height: 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: clamp(10px, 1.4vw, 18px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1vh, 12px);
+    min-height: 0;
+    overflow: hidden;
+    transition: opacity .4s;
+  }
+  .card.offline { opacity: .45; }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-head h2 { font-size: clamp(13px, 1.7vw, 16px); font-weight: 600; }
+  .card-head .iface { color: var(--muted); font-weight: 400; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    margin-left: auto;
+  }
+  .status-dot.on { background: var(--good); }
+
+  /* kart govdesi: solda hizlar, sagda grafik */
+  .card-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr;
+    gap: clamp(12px, 2vw, 28px);
+    min-height: 0;
+  }
+
+  /* anlık hız */
+  .speeds {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(6px, 1.5vh, 16px);
+  }
+  .speed .lbl {
+    font-size: clamp(10px, 1.3vw, 12px);
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .speed .arrow {           /* renkli işaret seriyi taşır, metin değil */
+    width: 10px; height: 10px; border-radius: 3px;
+    display: inline-block; flex: none;
+  }
+  .speed.down .arrow { background: var(--down); }
+  .speed.up   .arrow { background: var(--up); }
+  .speed .val {
+    font-size: clamp(22px, 4.6vh, 40px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .speed .unit {
+    font-size: clamp(12px, 1.6vw, 16px);
+    font-weight: 400;
+    color: var(--ink-2);
+    margin-left: 4px;
+  }
+
+  canvas.spark {
+    width: 100%;
+    height: 100%;
+    min-height: 80px;
+  }
+
+  /* toplam kutuları */
+  .totals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    flex: none;
+  }
+  .tile {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: clamp(8px, 1.2vw, 12px);
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0;
+  }
+  .tile .lbl {
+    font-size: clamp(9px, 1.2vw, 11px);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .tile .val {
+    font-size: clamp(15px, 2.2vw, 20px);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .tile .sub {
+    font-size: clamp(9px, 1.2vw, 11px);
+    color: var(--ink-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile .sub .k { display: inline-block; width: 7px; height: 7px; border-radius: 2px; vertical-align: baseline; margin-right: 2px; }
+  .tile .sub .k.d { background: var(--down); }
+  .tile .sub .k.u { background: var(--up); }
+
+  footer {
+    font-size: clamp(9px, 1.2vw, 11px);
+    color: var(--muted);
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span id="hostname">—</span>
+  <span class="chip">LAN <b id="localip">—</b></span>
+  <span class="chip">İnternet <b id="pubip">—</b></span>
+  <div id="clock"><div class="time">—</div><div class="date">—</div></div>
+</header>
+
+<main>
+  <section class="card" id="card-lan">
+    <div class="card-head">
+      <h2>Ethernet <span class="iface" id="lan-iface">—</span></h2>
+      <span class="status-dot" id="lan-dot"></span>
+    </div>
+    <div class="card-body">
+      <div class="speeds">
+        <div class="speed down"><div class="lbl"><span class="arrow"></span>İndirme</div>
+          <div class="val" id="lan-down">0<span class="unit">bit/s</span></div></div>
+        <div class="speed up"><div class="lbl"><span class="arrow"></span>Yükleme</div>
+          <div class="val" id="lan-up">0<span class="unit">bit/s</span></div></div>
+      </div>
+      <canvas class="spark" id="lan-spark"></canvas>
+    </div>
+    <div class="totals">
+      <div class="tile"><div class="lbl">Bu saat</div><div class="val" id="lan-hour">—</div><div class="sub" id="lan-hour-sub"></div></div>
+      <div class="tile"><div class="lbl">Bugün</div><div class="val" id="lan-day">—</div><div class="sub" id="lan-day-sub"></div></div>
+      <div class="tile"><div class="lbl">Bu ay</div><div class="val" id="lan-month">—</div><div class="sub" id="lan-month-sub"></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="card-ts">
+    <div class="card-head">
+      <h2>Tailscale <span class="iface">tailscale0</span></h2>
+      <span class="status-dot" id="ts-dot"></span>
+    </div>
+    <div class="card-body">
+      <div class="speeds">
+        <div class="speed down"><div class="lbl"><span class="arrow"></span>İndirme</div>
+          <div class="val" id="ts-down">0<span class="unit">bit/s</span></div></div>
+        <div class="speed up"><div class="lbl"><span class="arrow"></span>Yükleme</div>
+          <div class="val" id="ts-up">0<span class="unit">bit/s</span></div></div>
+      </div>
+      <canvas class="spark" id="ts-spark"></canvas>
+    </div>
+    <div class="totals">
+      <div class="tile"><div class="lbl">Bu saat</div><div class="val" id="ts-hour">—</div><div class="sub" id="ts-hour-sub"></div></div>
+      <div class="tile"><div class="lbl">Bugün</div><div class="val" id="ts-day">—</div><div class="sub" id="ts-day-sub"></div></div>
+      <div class="tile"><div class="lbl">Bu ay</div><div class="val" id="ts-month">—</div><div class="sub" id="ts-month-sub"></div></div>
+    </div>
+  </section>
+</main>
+
+<footer id="foot"></footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const POLL_MS = 1500;
+const WINDOW = 80;                      // sparkline penceresi (~2 dk)
+
+const hist = {
+  lan: { rx: [], tx: [] },
+  ts:  { rx: [], tx: [] },
+};
+let prev = null;
+let lanName = null;
+
+/* ---------- biçimlendirme ---------- */
+function fmtBits(bps) {
+  const units = ["bit/s", "Kbit/s", "Mbit/s", "Gbit/s"];
+  let i = 0;
+  while (bps >= 1000 && i < units.length - 1) { bps /= 1000; i++; }
+  const n = bps >= 100 ? Math.round(bps) : bps >= 10 ? bps.toFixed(1) : bps.toFixed(2);
+  return { n: i === 0 ? Math.round(bps) : n, u: units[i] };
+}
+function fmtBytes(b) {
+  const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return (b >= 100 ? Math.round(b) : b >= 10 ? b.toFixed(1) : b.toFixed(2)) + " " + units[i];
+}
+function setSpeed(el, bps) {
+  const f = fmtBits(Math.max(0, bps));
+  el.innerHTML = f.n + '<span class="unit">' + f.u + "</span>";
+}
+
+/* ---------- sparkline ---------- */
+function drawSpark(canvas, rxArr, txArr) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+    canvas.width = w * dpr; canvas.height = h * dpr;
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const css = getComputedStyle(document.documentElement);
+  const grid = css.getPropertyValue("--grid").trim();
+  const max = Math.max(1, ...rxArr, ...txArr) * 1.1;
+
+  ctx.strokeStyle = grid;                       // taban çizgisi (hairline)
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h - .5); ctx.lineTo(w, h - .5); ctx.stroke();
+
+  for (const [arr, color] of [
+    [rxArr, css.getPropertyValue("--down").trim()],
+    [txArr, css.getPropertyValue("--up").trim()],
+  ]) {
+    if (arr.length < 2) continue;
+    // mevcut veriyi her zaman tum genislige yay (dolunca ~2 dk'lik kayan pencere)
+    const step = w / (arr.length - 1);
+    const pts = arr.map((v, i) => [i * step, h - 2 - (v / max) * (h - 6)]);
+
+    ctx.beginPath();                             // %10 alan yıkaması
+    ctx.moveTo(pts[0][0], h);
+    pts.forEach(p => ctx.lineTo(p[0], p[1]));
+    ctx.lineTo(pts[pts.length - 1][0], h);
+    ctx.closePath();
+    ctx.globalAlpha = 0.10; ctx.fillStyle = color; ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.beginPath();                             // 2px çizgi
+    pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.stroke();
+  }
+}
+
+/* ---------- canlı veri ---------- */
+async function pollLive() {
+  try {
+    const r = await fetch("/api/live", { cache: "no-store" });
+    const d = await r.json();
+
+    $("hostname").textContent = d.hostname || "—";
+    $("localip").textContent = d.local_ip || "—";
+    $("pubip").textContent = d.public_ip || "—";
+
+    if (d.lan.name !== lanName) {               // aktif arayüz değişti
+      lanName = d.lan.name;
+      $("lan-iface").textContent = "· " + lanName;
+      hist.lan.rx.length = hist.lan.tx.length = 0;
+      prev = null;
+    }
+    $("lan-dot").classList.toggle("on", !!d.lan.up);
+    $("ts-dot").classList.toggle("on", !!d.ts.up);
+    $("card-lan").classList.toggle("offline", !d.lan.up);
+    $("card-ts").classList.toggle("offline", !d.ts.up);
+
+    if (prev) {
+      const dt = d.t - prev.t;
+      if (dt > 0.2) {
+        for (const key of ["lan", "ts"]) {
+          const dr = d[key].rx - prev[key].rx, dtx = d[key].tx - prev[key].tx;
+          if (dr < 0 || dtx < 0) continue;      // sayaç sıfırlanmış, örneği atla
+          const rbps = dr * 8 / dt, tbps = dtx * 8 / dt;
+          hist[key].rx.push(rbps); hist[key].tx.push(tbps);
+          if (hist[key].rx.length > WINDOW) { hist[key].rx.shift(); hist[key].tx.shift(); }
+          setSpeed($(key === "lan" ? "lan-down" : "ts-down"), rbps);
+          setSpeed($(key === "lan" ? "lan-up" : "ts-up"), tbps);
+        }
+      }
+    }
+    prev = d;
+    drawSpark($("lan-spark"), hist.lan.rx, hist.lan.tx);
+    drawSpark($("ts-spark"), hist.ts.rx, hist.ts.tx);
+  } catch (e) {
+    $("card-lan").classList.add("offline");
+    $("card-ts").classList.add("offline");
+  }
+}
+
+/* ---------- vnstat toplamları ---------- */
+function setTotal(prefix, period, data) {
+  const v = $(prefix + "-" + period), s = $(prefix + "-" + period + "-sub");
+  if (!data) { v.textContent = "—"; s.textContent = ""; return; }
+  v.textContent = fmtBytes(data.rx + data.tx);
+  s.innerHTML = '<span class="k d"></span>' + fmtBytes(data.rx) +
+                ' <span class="k u"></span>' + fmtBytes(data.tx);
+}
+
+async function pollVnstat() {
+  try {
+    const r = await fetch("/api/vnstat", { cache: "no-store" });
+    const d = await r.json();
+    if (d.error) { $("foot").textContent = "vnstat: " + d.error; return; }
+    const lan = lanName && d.ifaces[lanName];
+    const ts = d.ifaces["tailscale0"];
+    for (const p of ["hour", "day", "month"]) {
+      setTotal("lan", p, lan && lan[p]);
+      setTotal("ts", p, ts && ts[p]);
+    }
+    if (d.updated)
+      $("foot").textContent = "Toplamlar: vnstat · son kayıt " + d.updated;
+  } catch (e) { /* sunucu geçici olarak yoksa sessiz kal */ }
+}
+
+/* ---------- saat ---------- */
+function tickClock() {
+  const now = new Date();
+  $("clock").children[0].textContent =
+    now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  $("clock").children[1].textContent =
+    now.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+tickClock();
+setInterval(tickClock, 10_000);
+pollLive();
+setInterval(pollLive, POLL_MS);
+setTimeout(pollVnstat, 700);                    // lanName öğrenildikten sonra
+setInterval(pollVnstat, 60_000);
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NetDash Kiosk
+Comment=Ag gosterge panelini tam ekran acar
+Exec=bash -c "/opt/netdash/kiosk.sh >/dev/shm/netdash-kiosk.log 2>&1"
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=3
